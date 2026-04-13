@@ -1,0 +1,61 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rlm-ollama
+    gpus: all
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+
+  benchmark:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.benchmark
+    container_name: rlm-benchmark
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434/v1
+      OLLAMA_HEALTH_URL: http://ollama:11434/api/tags
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+      BENCHMARK_AUTORUN: ${BENCHMARK_AUTORUN:-0}
+      BENCHMARK_RUNS: ${BENCHMARK_RUNS:-3}
+      BENCHMARK_MAX_ITERATIONS: ${BENCHMARK_MAX_ITERATIONS:-6}
+      BENCHMARK_STARTUP_TIMEOUT: ${BENCHMARK_STARTUP_TIMEOUT:-300}
+      BENCHMARK_API_HOST: 0.0.0.0
+      BENCHMARK_API_PORT: 8787
+    expose:
+      - "8787"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8787/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  gui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.visualizer
+    container_name: rlm-gui
+    depends_on:
+      benchmark:
+        condition: service_healthy
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+      BENCHMARK_API_BASE: http://benchmark:8787
+
+volumes:
+  ollama-data:

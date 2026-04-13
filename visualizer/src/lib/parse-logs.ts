@@ -1,5 +1,10 @@
 import { RLMIteration, RLMLogFile, LogMetadata, RLMConfigMetadata, extractFinalAnswer } from './types';
 
+interface TrajectoryData {
+  run_metadata?: Partial<RLMConfigMetadata>;
+  iterations?: unknown[];
+}
+
 // Extract the context variable from code block locals
 export function extractContextVariable(iterations: RLMIteration[]): string | null {
   for (const iter of iterations) {
@@ -170,6 +175,49 @@ export function parseLogFile(fileName: string, content: string): RLMLogFile {
   const { iterations, config } = parseJSONL(content);
   const metadata = computeMetadata(iterations);
   
+  return {
+    fileName,
+    filePath: fileName,
+    iterations,
+    metadata,
+    config,
+  };
+}
+
+export function parseTrajectoryData(fileName: string, trajectory: TrajectoryData): RLMLogFile {
+  const rawIterations = Array.isArray(trajectory.iterations) ? trajectory.iterations : [];
+
+  const iterations: RLMIteration[] = rawIterations.map((raw, index) => {
+    const item = (raw ?? {}) as Partial<RLMIteration>;
+    const prompt = Array.isArray(item.prompt) ? item.prompt : [];
+    const codeBlocks = Array.isArray(item.code_blocks) ? item.code_blocks : [];
+
+    return {
+      type: item.type ?? 'iteration',
+      iteration: typeof item.iteration === 'number' ? item.iteration : index + 1,
+      timestamp: typeof item.timestamp === 'string' ? item.timestamp : new Date().toISOString(),
+      prompt: prompt as Array<{ role: string; content: string }>,
+      response: typeof item.response === 'string' ? item.response : '',
+      code_blocks: codeBlocks,
+      final_answer: item.final_answer ?? null,
+      iteration_time: typeof item.iteration_time === 'number' ? item.iteration_time : null,
+    };
+  });
+
+  const metadata = computeMetadata(iterations);
+  const runMetadata = trajectory.run_metadata ?? {};
+
+  const config: RLMConfigMetadata = {
+    root_model: runMetadata.root_model ?? null,
+    max_depth: runMetadata.max_depth ?? null,
+    max_iterations: runMetadata.max_iterations ?? null,
+    backend: runMetadata.backend ?? null,
+    backend_kwargs: runMetadata.backend_kwargs ?? null,
+    environment_type: runMetadata.environment_type ?? null,
+    environment_kwargs: runMetadata.environment_kwargs ?? null,
+    other_backends: runMetadata.other_backends ?? null,
+  };
+
   return {
     fileName,
     filePath: fileName,

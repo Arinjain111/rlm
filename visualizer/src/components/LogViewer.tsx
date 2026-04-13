@@ -75,6 +75,11 @@ export function LogViewer({ logFile, onBack }: LogViewerProps) {
               {metadata.hasErrors && (
                 <Badge variant="destructive" className="text-xs">Has Errors</Badge>
               )}
+              {logFile.status && logFile.status !== 'completed' && (
+                <Badge variant="outline" className="text-xs uppercase border-amber-500/40 text-amber-600">
+                  {logFile.status}
+                </Badge>
+              )}
               {metadata.finalAnswer && (
                 <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs">
                   Completed
@@ -139,6 +144,14 @@ export function LogViewer({ logFile, onBack }: LogViewerProps) {
               icon="⏱"
               variant="yellow"
             />
+            {typeof logFile.liveMetrics?.contextSavedTokenEstimate === 'number' && (
+              <StatsCard
+                label="Ctx Saved"
+                value={`${logFile.liveMetrics.contextSavedTokenEstimate}`}
+                icon="⇣"
+                variant="green"
+              />
+            )}
           </div>
         </div>
       </div>

@@ -44,12 +44,32 @@ export interface RLMConfigMetadata {
   other_backends: string[] | null;
 }
 
+export interface LiveRunMetrics {
+  iterations?: number;
+  subcalls?: number;
+  executionTime?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  promptTokenEstimate?: number;
+  naiveContextTokenEstimate?: number;
+  contextSavedTokenEstimate?: number;
+  contextSavedPercentEstimate?: number;
+  throughputTokensPerSec?: number;
+}
+
+export type LiveRunStatus = 'pending' | 'running' | 'completed' | 'failed';
+
 export interface RLMLogFile {
   fileName: string;
   filePath: string;
   iterations: RLMIteration[];
   metadata: LogMetadata;
   config: RLMConfigMetadata;
+  runId?: string;
+  status?: LiveRunStatus;
+  source?: 'upload' | 'demo' | 'live';
+  liveMetrics?: LiveRunMetrics;
+  updatedAt?: number;
 }
 
 export interface LogMetadata {

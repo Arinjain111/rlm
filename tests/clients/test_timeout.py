@@ -37,6 +37,37 @@ class TestDefaultTimeout:
 class TestOpenAIClientTimeout:
     """Tests for OpenAI client timeout."""
 
+    def test_local_base_url_defaults_dummy_api_key(self):
+        """Local OpenAI-compatible endpoints should not require a real cloud API key."""
+        from rlm.clients.openai import OpenAIClient
+
+        with patch("rlm.clients.openai.openai.OpenAI") as mock_openai:
+            with patch("rlm.clients.openai.openai.AsyncOpenAI"):
+                OpenAIClient(
+                    api_key=None,
+                    model_name="meta-llama/Llama-3.1-8B-Instruct",
+                    base_url="http://127.0.0.1:8000/v1",
+                )
+
+                call_kwargs = mock_openai.call_args[1]
+                assert call_kwargs["api_key"] == "EMPTY"
+
+    def test_custom_base_url_uses_openai_env_fallback(self):
+        """Custom OpenAI-compatible endpoints should inherit OPENAI_API_KEY when available."""
+        from rlm.clients.openai import OpenAIClient
+
+        with patch("rlm.clients.openai.DEFAULT_OPENAI_API_KEY", "test-env-key"):
+            with patch("rlm.clients.openai.openai.OpenAI") as mock_openai:
+                with patch("rlm.clients.openai.openai.AsyncOpenAI"):
+                    OpenAIClient(
+                        api_key=None,
+                        model_name="custom-model",
+                        base_url="https://example.internal/v1",
+                    )
+
+                    call_kwargs = mock_openai.call_args[1]
+                    assert call_kwargs["api_key"] == "test-env-key"
+
     def test_timeout_passed_to_client(self):
         """Timeout should be passed to OpenAI client."""
         from rlm.clients.openai import OpenAIClient

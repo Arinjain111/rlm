@@ -1,0 +1,32 @@
+FROM python:3.12-slim
+
+WORKDIR /workspace
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml README.md MANIFEST.IN LICENSE /workspace/
+COPY rlm /workspace/rlm
+COPY examples /workspace/examples
+COPY docker/start_benchmark_runner.sh /usr/local/bin/start_benchmark_runner.sh
+COPY docker/benchmark_api.py /usr/local/bin/benchmark_api.py
+
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -e /workspace
+RUN pip install --no-cache-dir flask
+RUN chmod +x /usr/local/bin/start_benchmark_runner.sh /usr/local/bin/benchmark_api.py
+
+ENV OLLAMA_BASE_URL=http://ollama:11434/v1
+ENV OLLAMA_HEALTH_URL=http://ollama:11434/api/tags
+ENV OLLAMA_MODEL=qwen2.5:0.5b
+ENV BENCHMARK_AUTORUN=0
+ENV BENCHMARK_RUNS=3
+ENV BENCHMARK_MAX_ITERATIONS=6
+ENV BENCHMARK_STARTUP_TIMEOUT=300
+ENV BENCHMARK_API_HOST=0.0.0.0
+ENV BENCHMARK_API_PORT=8787
+
+EXPOSE 8787
+
+ENTRYPOINT ["/usr/local/bin/start_benchmark_runner.sh"]

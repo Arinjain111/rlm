@@ -342,6 +342,13 @@ class RLM:
                         build_user_prompt(root_prompt, i, context_count, history_count)
                     ]
 
+                    # Fire iteration start callback
+                    if self.on_iteration_start:
+                        try:
+                            self.on_iteration_start(self.depth, i + 1)
+                        except Exception:
+                            pass  # Don't let callback errors break execution
+
                     iteration: RLMIteration = self._completion_turn(
                         prompt=current_prompt,
                         lm_handler=lm_handler,
@@ -374,6 +381,17 @@ class RLM:
 
                     # Verbose output for this iteration
                     self.verbose.print_iteration(iteration, i + 1)
+
+                    # Fire iteration complete callback
+                    if self.on_iteration_complete:
+                        try:
+                            self.on_iteration_complete(
+                                self.depth,
+                                i + 1,
+                                float(iteration.iteration_time or 0.0),
+                            )
+                        except Exception:
+                            pass  # Don't let callback errors break execution
 
                     if final_answer is not None:
                         time_end = time.perf_counter()
@@ -775,6 +793,8 @@ class RLM:
             # Propagate callbacks to children for nested tracking
             on_subcall_start=self.on_subcall_start,
             on_subcall_complete=self.on_subcall_complete,
+            on_iteration_start=self.on_iteration_start,
+            on_iteration_complete=self.on_iteration_complete,
         )
         try:
             result = child.completion(prompt, root_prompt=None)

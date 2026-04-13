@@ -117,6 +117,122 @@ export PRIME_API_KEY=...
 ### Model Providers
 We currently support most major clients (OpenAI, Anthropic), as well as the router platforms (OpenRouter, Portkey). For local models, we recommend using vLLM (which interfaces with the [OpenAI client](https://github.com/alexzhang13/rlm/blob/main/rlm/clients/openai.py)). To view or add support for more clients, start by looking at [`rlm/clients/`](https://github.com/alexzhang13/rlm/tree/main/rlm/clients).
 
+### Local Models + Docker REPL
+RLM separates **model inference backend** from **code execution environment**:
+
+- Inference backend: where model tokens are generated (`backend="vllm"` or `backend="openai"` + `base_url` for OpenAI-compatible local servers).
+- REPL environment: where generated Python runs (`environment="docker"`, `"local"`, `"modal"`, etc).
+
+This means local inference is supported: you can run a local model server on your host GPU and still execute RLM code in Docker for isolation.
+
+> [!NOTE]
+> Modal/Prime/Daytona/E2B are REPL execution environments. They do not replace your model backend unless you explicitly point `base_url` to a model endpoint running there.
+
+Example (hosted local model server + Docker REPL):
+
+```python
+from rlm import RLM
+
+rlm = RLM(
+  backend="vllm",
+  backend_kwargs={
+    "model_name": "meta-llama/Llama-3.1-8B-Instruct",
+    "base_url": "http://127.0.0.1:8000/v1",
+    "api_key": "EMPTY",  # local OpenAI-compatible servers usually ignore this
+  },
+  environment="docker",
+  environment_kwargs={"image": "python:3.11-slim"},
+)
+
+result = rlm.completion("Summarize this context in 3 bullet points.")
+print(result.response)
+```
+
+Optional benchmark helper:
+
+```bash
+make local-benchmark
+# or
+uv run python -m examples.local_model_docker_benchmark --base-url http://127.0.0.1:8000/v1 --model meta-llama/Llama-3.1-8B-Instruct
+```
+
+### Single Container: App + LLM Together (Ollama)
+
+This repository now includes a root `Dockerfile` that launches both:
+- an Ollama server (OpenAI-compatible endpoint), and
+- an application command (defaults to the benchmark example).
+
+Build:
+
+```bash
+docker build -t rlm-all-in-one .
+```
+
+Run (GPU optional; recommended if available):
+
+```bash
+docker run --rm --gpus all \
+  -e OLLAMA_MODEL=qwen2.5:0.5b \
+  -e APP_CMD="python -m examples.local_model_docker_benchmark --backend openai --environment local --base-url http://127.0.0.1:11434/v1 --model qwen2.5:0.5b --api-key EMPTY --runs 3" \
+  -v ollama-data:/root/.ollama \
+  -p 11434:11434 \
+  rlm-all-in-one
+```
+
+Notes:
+- `APP_CMD` can be any command you want to run in the same container.
+- Use `OLLAMA_SKIP_PULL=1` if the model is already present in the mounted Ollama volume.
+- The OpenAI-compatible endpoint is exposed at `http://localhost:11434/v1`.
+- The startup script is `docker/start_app_with_ollama.sh`.
+
+### Docker Compose: GUI + GPU + Benchmarks
+
+If you want the GUI and GPU-backed LLM up at the same time, use the compose stack:
+
+- `ollama` service: GPU-backed model server on `http://localhost:11434`.
+- `benchmark` service: Python runtime for benchmark commands.
+- `gui` service: visualizer UI on `http://localhost:3001`.
+
+Start everything:
+
+```bash
+docker compose up -d --build ollama benchmark gui
+```
+
+Pull a model once:
+
+```bash
+docker compose exec ollama ollama pull qwen2.5:0.5b
+```
+
+Run benchmarks while GUI remains running:
+
+```bash
+docker compose exec benchmark python -m examples.local_model_docker_benchmark \
+  --backend openai \
+  --environment local \
+  --base-url http://ollama:11434/v1 \
+  --model qwen2.5:0.5b \
+  --api-key EMPTY \
+  --runs 3
+```
+
+Live GUI mode (no manual `.jsonl` upload required):
+
+1. Open `http://localhost:3001`
+2. Use the **Live Run** panel to enter your prompt, model, runs, and max iterations
+3. Click **Run Live** to stream iteration and subcall events in real time
+4. Completed runs are added to **Loaded Files** and can be opened in the full trajectory viewer
+
+Useful checks:
+
+```bash
+docker compose ps
+docker compose logs -f ollama
+docker compose logs -f benchmark
+docker compose logs -f gui
+```
+
 ## Relevant Reading
 * **[Dec '25]** [Recursive Language Models arXiv](https://arxiv.org/abs/2512.24601)
 * **[Oct '25]** [Recursive Language Models Blogpost](https://alexzhang13.github.io/blog/2025/rlm/)

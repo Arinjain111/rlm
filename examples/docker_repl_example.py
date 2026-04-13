@@ -57,9 +57,19 @@ def main():
             result = repl.execute_code("print(r)")
             print(f"  Response: {result.stdout.strip()}")
 
+            result = repl.execute_code('rr = rlm_query("Hello from recursive alias!")')
+            print(f"  rlm_query alias → stderr: {result.stderr or '(none)'}")
+
+            result = repl.execute_code("print(rr)")
+            print(f"  Recursive alias response: {result.stdout.strip()}")
+
             result = repl.execute_code('rs = llm_query_batched(["Q1", "Q2"])')
             result = repl.execute_code("print(len(rs))")
             print(f"  Batched count: {result.stdout.strip()}")
+
+            result = repl.execute_code('rrs = rlm_query_batched(["Q3", "Q4"])')
+            result = repl.execute_code("print(len(rrs))")
+            print(f"  Recursive alias batched count: {result.stdout.strip()}")
 
     print("\n" + "=" * 50)
     print("Done!")

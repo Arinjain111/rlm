@@ -102,7 +102,7 @@ if __name__ == "__main__":
 # =============================================================================
 
 
-def _build_exec_script(code: str, broker_port: int = 8888) -> str:
+def _build_exec_script(code: str, broker_port: int = 8888, depth: int = 1) -> str:
     """
     Build a script that executes code with state persistence.
     LLM queries go through the local broker server.
@@ -135,7 +135,7 @@ def llm_query(prompt, model=None):
     try:
         response = requests.post(
             f"{{BROKER_URL}}/enqueue",
-            json={{"type": "single", "prompt": prompt, "model": model}},
+            json={{"type": "single", "prompt": prompt, "model": model, "depth": {depth}}},
             timeout=300,
         )
         data = response.json()
@@ -151,7 +151,7 @@ def llm_query_batched(prompts, model=None):
     try:
         response = requests.post(
             f"{{BROKER_URL}}/enqueue",
-            json={{"type": "batched", "prompts": prompts, "model": model}},
+            json={{"type": "batched", "prompts": prompts, "model": model, "depth": {depth}}},
             timeout=300,
         )
         data = response.json()
@@ -160,6 +160,15 @@ def llm_query_batched(prompts, model=None):
         return data.get("responses", ["Error: No response"] * len(prompts))
     except Exception as e:
         return [f"Error: LM query failed - {{e}}"] * len(prompts)
+
+
+def rlm_query(prompt, model=None):
+    # Isolated environments do not support recursive child RLM calls yet.
+    return llm_query(prompt, model)
+
+
+def rlm_query_batched(prompts, model=None):
+    return llm_query_batched(prompts, model)
 
 
 # =============================================================================
@@ -211,14 +220,26 @@ def FINAL_VAR(variable_name):
     variable_name = variable_name.strip().strip("\\"\\'")
     if variable_name in _locals:
         return str(_locals[variable_name])
-    return f"Error: Variable '{{variable_name}}' not found"
+    available = [k for k in _locals.keys() if not k.startswith("_")]
+    if available:
+        return f"Error: Variable '{{variable_name}}' not found. Available variables: {{available}}. You must create and assign a variable BEFORE calling FINAL_VAR on it."
+    return f"Error: Variable '{{variable_name}}' not found. No variables have been created yet. You must create and assign a variable in a REPL block BEFORE calling FINAL_VAR on it."
+
+def SHOW_VARS():
+    available = {{k: type(v).__name__ for k, v in _locals.items() if not k.startswith("_")}}
+    if not available:
+        return "No variables created yet. Use ```repl``` blocks to create variables."
+    return f"Available variables: {{available}}"
 
 _globals = {{
     "__builtins__": __builtins__,
     "__name__": "__main__",
     "llm_query": llm_query,
     "llm_query_batched": llm_query_batched,
+    "rlm_query": rlm_query,
+    "rlm_query_batched": rlm_query_batched,
     "FINAL_VAR": FINAL_VAR,
+    "SHOW_VARS": SHOW_VARS,
 }}
 
 code = base64.b64decode("{code_b64}").decode()
@@ -278,13 +299,14 @@ class E2BREPL(IsolatedEnv):
         context_payload: dict | list | str | None = None,
         setup_code: str | None = None,
         persistent: bool = False,
+        depth: int = 1,
         **kwargs: Any,
     ):
         if persistent:
             raise NotImplementedError(
                 "Persistent REPLs are currently not supported for environment: E2BREPL"
             )
-        super().__init__(persistent=persistent, **kwargs)
+        super().__init__(persistent=persistent, depth=depth, **kwargs)
 
         self.timeout = timeout
         self.lm_handler_address = lm_handler_address
@@ -398,7 +420,7 @@ class E2BREPL(IsolatedEnv):
 
         if req_type == "single":
             prompt = req_data.get("prompt")
-            request = LMRequest(prompt=prompt, model=model)
+            request = LMRequest(prompt=prompt, model=model, depth=self.depth)
             response = send_lm_request(self.lm_handler_address, request)
 
             if not response.success:
@@ -412,7 +434,9 @@ class E2BREPL(IsolatedEnv):
 
         elif req_type == "batched":
             prompts = req_data.get("prompts", [])
-            responses = send_lm_request_batched(self.lm_handler_address, prompts, model=model)
+            responses = send_lm_request_batched(
+                self.lm_handler_address, prompts, model=model, depth=self.depth
+            )
 
             results = []
             for resp in responses:
@@ -448,7 +472,7 @@ class E2BREPL(IsolatedEnv):
             self.pending_llm_calls.clear()
 
         # Build and write the script to sandbox
-        script = _build_exec_script(code, self.BROKER_PORT)
+        script = _build_exec_script(code, self.BROKER_PORT, self.depth)
         self.sandbox.files.write("/tmp/run_script.py", script)
 
         # Run the script

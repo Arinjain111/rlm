@@ -171,6 +171,15 @@ def llm_query_batched(prompts, model=None):
         return [f"Error: LM query failed - {{e}}"] * len(prompts)
 
 
+def rlm_query(prompt, model=None):
+    # Isolated environments do not support recursive child RLM calls yet.
+    return llm_query(prompt, model)
+
+
+def rlm_query_batched(prompts, model=None):
+    return llm_query_batched(prompts, model)
+
+
 # =============================================================================
 # State Management
 # =============================================================================
@@ -236,6 +245,8 @@ _globals = {{
     "__name__": "__main__",
     "llm_query": llm_query,
     "llm_query_batched": llm_query_batched,
+    "rlm_query": rlm_query,
+    "rlm_query_batched": rlm_query_batched,
     "FINAL_VAR": FINAL_VAR,
     "SHOW_VARS": SHOW_VARS,
 }}

@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
 from typing import Any
+from urllib.parse import urlparse
 
 import openai
 from dotenv import load_dotenv
@@ -16,6 +17,15 @@ DEFAULT_OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 DEFAULT_VERCEL_API_KEY = os.getenv("AI_GATEWAY_API_KEY")
 DEFAULT_PRIME_API_KEY = os.getenv("PRIME_API_KEY")
 DEFAULT_PRIME_INTELLECT_BASE_URL = "https://api.pinference.ai/api/v1/"
+
+
+def _is_local_base_url(base_url: str | None) -> bool:
+    """Return True if base_url points to a local OpenAI-compatible endpoint."""
+    if not base_url:
+        return False
+    parsed = urlparse(base_url)
+    host = (parsed.hostname or "").lower()
+    return host in {"localhost", "127.0.0.1", "0.0.0.0", "host.docker.internal", "::1"}
 
 
 class OpenAIClient(BaseLM):
@@ -45,6 +55,14 @@ class OpenAIClient(BaseLM):
                 api_key = DEFAULT_VERCEL_API_KEY
             elif base_url == DEFAULT_PRIME_INTELLECT_BASE_URL:
                 api_key = DEFAULT_PRIME_API_KEY
+            else:
+                # For custom OpenAI-compatible endpoints, prefer OPENAI_API_KEY if available.
+                api_key = DEFAULT_OPENAI_API_KEY
+
+            # The OpenAI SDK requires api_key to be non-null even for local servers
+            # (vLLM/LM Studio/Ollama gateways) that do not authenticate requests.
+            if api_key is None and _is_local_base_url(base_url):
+                api_key = "EMPTY"
 
         # Pass through arbitrary kwargs to the OpenAI client (e.g. default_headers, default_query, max_retries).
         # Exclude model_name since it is not an OpenAI client constructor argument.

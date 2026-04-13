@@ -1,5 +1,5 @@
 .PHONY: help install install-dev install-modal run-all \
-        quickstart docker-repl lm-repl modal-repl \
+	quickstart docker-repl lm-repl modal-repl local-benchmark \
         lint format test check
 
 help:
@@ -14,6 +14,7 @@ help:
 	@echo "Examples:"
 	@echo "  make quickstart     - Run quickstart.py (needs OPENAI_API_KEY)"
 	@echo "  make docker-repl    - Run docker_repl_example.py (needs Docker)"
+	@echo "  make local-benchmark - Run local_model_docker_benchmark.py (needs local OpenAI-compatible model server + Docker)"
 	@echo "  make lm-repl        - Run lm_in_repl.py (needs PORTKEY_API_KEY)"
 	@echo "  make modal-repl     - Run modal_repl_example.py (needs Modal)"
 	@echo ""
@@ -39,6 +40,9 @@ quickstart: install
 
 docker-repl: install
 	uv run python -m examples.docker_repl_example
+
+local-benchmark: install
+	uv run python -m examples.local_model_docker_benchmark
 
 lm-repl: install
 	uv run python -m examples.lm_in_repl
