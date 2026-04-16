@@ -59,6 +59,17 @@ export interface LiveRunMetrics {
 
 export type LiveRunStatus = 'pending' | 'running' | 'completed' | 'failed';
 
+export interface SessionStats {
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  turnCount: number;
+  naiveRecursiveInputTokens: number;
+  recursiveSavingsEstimate: number;
+  recursiveSavingsPercent: number;
+  localCostUsd: number;
+  equivalentCloudCostUsd: number;
+}
+
 export interface RLMLogFile {
   fileName: string;
   filePath: string;

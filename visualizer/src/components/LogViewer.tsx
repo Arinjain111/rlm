@@ -12,6 +12,32 @@ import { IterationTimeline } from './IterationTimeline';
 import { ThemeToggle } from './ThemeToggle';
 import { RLMLogFile } from '@/lib/types';
 
+/** Expandable final-answer cell for the LogViewer header */
+function FinalAnswerCell({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  // Trim markdown heading markers for cleaner preview
+  const clean = text.replace(/^#+\s*/gm, '').trim();
+  const PREVIEW_LEN = 220;
+  const isLong = clean.length > PREVIEW_LEN;
+  const display = !isLong || expanded ? clean : clean.slice(0, PREVIEW_LEN) + '…';
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap leading-relaxed">
+        {display}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded((e) => !e)}
+          className="mt-1 text-[10px] font-mono text-primary/70 hover:text-primary underline-offset-2 hover:underline transition-colors"
+        >
+          {expanded ? '▲ collapse' : '▼ show full answer'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface LogViewerProps {
   logFile: RLMLogFile;
   onBack: () => void;
@@ -110,10 +136,13 @@ export function LogViewer({ logFile, onBack }: LogViewerProps) {
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">
                     Final Answer
                   </p>
-                  <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 line-clamp-2">
-                    {metadata.finalAnswer || 'Not yet completed'}
-                  </p>
+                  {metadata.finalAnswer ? (
+                    <FinalAnswerCell text={metadata.finalAnswer} />
+                  ) : (
+                    <p className="text-sm font-medium text-amber-500">Not yet completed</p>
+                  )}
                 </div>
+
               </div>
             </CardContent>
           </Card>

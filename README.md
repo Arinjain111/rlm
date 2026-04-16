@@ -21,13 +21,42 @@
   </a>
 </p>
 
+---
+
+## 🎓 AI Career Counsellor — Powered by RLMs
+
+> **The visualizer has been upgraded into a fully interactive AI Career Counsellor.** Using a local Qwen 2.5 model + recursive reasoning, it gives personalised career guidance — completely free, 100% private, and running on your own machine.
+
 <p align="center">
-  <a href="https://arxiv.org/abs/2512.24601">
-    <img src="media/paper_preview.png" alt="Paper Preview" width="300"/>
-  </a>
+  <img src="media/screenshot_landing.png" alt="AI Career Counsellor Landing Page" width="900"/>
+  <br/><em>Landing page — quick topic cards, chat widget, and $0 cost stats</em>
 </p>
 
+### What it can do
+
+| Feature | Details |
+|---|---|
+| 💬 **Chat counsellor** | Ask career questions in natural language — streams responses token-by-token |
+| 🔍 **Thinking phases** | Watch the AI analyse your query, pull context, and construct an answer step by step |
+| 📊 **Live trace viewer** | See every reasoning iteration, sub-call, and execution step as it happens |
+| 🗂️ **Topic cards** | One-click prebuilt questions: career pivots, salary negotiation, interview prep, and more |
+| 🔁 **Recursive reasoning** | Complex questions are broken into sub-questions and answered depth-first |
+| 🔒 **Fully local** | Qwen 2.5 runs on your machine via Ollama — no data sent anywhere, no API costs |
+
+<p align="center">
+  <img src="media/screenshot_chat.png" alt="Chat Widget" width="900"/>
+  <br/><em>Chat widget with thinking-phase animation and quick starter chips</em>
+</p>
+
+<p align="center">
+  <img src="media/screenshot_arch.png" alt="How It Works + Live Runner" width="900"/>
+  <br/><em>Live benchmark runner (left) and the animated "How It Works" flow diagram (right)</em>
+</p>
+
+---
+
 ## Overview
+
 Recursive Language Models (RLMs) are a task-agnostic inference paradigm for language models (LMs) to handle near-infinite length contexts by enabling the LM to *programmatically* examine, decompose, and recursively call itself over its input. RLMs replace the canonical `llm.completion(prompt, model)` call with a `rlm.completion(prompt, model)` call. RLMs offload the context as a variable in a REPL environment that the LM can interact with and launch sub-LM calls inside of.
 
 This repository provides an extensible inference engine for using RLMs around standard API-based and local LLMs. The initial experiments and idea were proposed in a [blogpost](https://alexzhang13.github.io/blog/2025/rlm/) in 2025, with expanded results in an [arXiv preprint](https://arxiv.org/abs/2512.24601).
@@ -35,13 +64,45 @@ This repository provides an extensible inference engine for using RLMs around st
 > [!NOTE]
 > This repository contains inference code for RLMs with support for various sandbox environments. Open-source contributions are welcome. This repository is maintained by the authors of the paper from the MIT OASYS lab.
 
-## Quick Setup
+---
+
+## 🚀 Quick Start — AI Career Counsellor (Docker)
+
+The easiest way to run the full stack (Ollama + benchmark server + web UI) is with Docker Compose:
+
+```bash
+# 1. Clone and start
+git clone https://github.com/alexzhang13/rlm.git
+cd rlm
+docker compose up -d --build
+
+# 2. Pull the model (first time only)
+docker compose exec ollama ollama pull qwen2.5:0.5b
+
+# 3. Open the career counsellor
+open http://localhost:3001
+```
+
+That's it — the counsellor is live at **http://localhost:3001**.
+
+### What gets started
+
+| Service | Port | Purpose |
+|---|---|---|
+| `ollama` | 11434 | Local Qwen 2.5 model server |
+| `benchmark` | — | Python RLM benchmark runner |
+| `gui` | 3001 | Next.js career counsellor + trace viewer |
+
+---
+
+## 🧑‍💻 Python Library Quick Setup
+
 You can try out RLMs quickly by installing from PyPi:
 ```bash
 pip install rlms
 ```
 
-The default RLM client uses a REPL environment that runs on the host process through Python `exec` calls. It uses the same virtual environment as the host process (i.e. it will have access to the same dependencies), but with some limitations in its available global modules. As an example, we can call RLM completions using GPT-5-nano:
+The default RLM client uses a REPL environment that runs on the host process through Python `exec` calls. As an example, we can call RLM completions using GPT-5-nano:
 ```python
 from rlm import RLM
 
@@ -69,15 +130,64 @@ This project includes a `Makefile` to simplify common tasks.
 - `make install`: Install base dependencies.
 - `make check`: Run linter, formatter, and tests.
 
-To run a quick test, the following will run an RLM query with the OpenAI client using your environment variable `OPENAI_API_KEY` (feel free to change this). This will generate console output as well as a log which you can use with the visualizer to explore the trajectories.
+To run a quick test, the following will run an RLM query with the OpenAI client using your environment variable `OPENAI_API_KEY`:
 ```bash
 make quickstart
 ```
 
 </details>
 
+---
+
+## 🖥️ Visualizer — Career Counsellor UI
+
+### Running the visualizer locally (without Docker)
+
+```bash
+cd visualizer/
+npm install
+npm run dev        # http://localhost:3001
+```
+
+### Key UI features
+
+#### 1. Chat with the AI Career Counsellor
+Open the 💬 button in the bottom-right. The counsellor:
+- **Streams** responses token-by-token (typewriter effect)
+- Shows **thinking phases** before the first token: *Analyzing query → Pulling model weights → Constructing context → Generating response*
+- Tracks **session token counts** and estimates cloud vs local cost savings
+
+#### 2. Live Benchmark Runner
+The "Live Run" tab lets you:
+- Enter a custom career counselling prompt
+- Watch iterations arrive in real time via a **live timeline card strip**
+- Inspect the full **Execution Timeline** — each event (iteration start/complete, sub-calls, errors) shown with colour-coded icons
+- View the final answer extracted from the run
+
+#### 3. Trajectory Viewer
+Click any completed run card to open the full deep-dive:
+- **Iteration timeline** with token counts and duration
+- **Conversation panel** — per-iteration LLM responses with code block detection and sub-call highlighting
+- **Code & Sub-LM Calls** panel — execution output and recursive call details
+- **Final Answer** — expandable rich-text view with "show full answer" toggle
+
+#### 4. Topic Cards
+Pre-built career questions organised by category:
+
+| Category | Examples |
+|---|---|
+| Career Navigation | Career roadmap, Career pivot, Break into AI/ML |
+| Job Search | Resume review, Interview prep, Job search strategy |
+| Skills & Learning | Skills gap analysis, Learning roadmap, Certifications |
+| Compensation | Salary negotiation, Equity explainer, Market rate check |
+
+Clicking any card opens the chat with the question pre-filled.
+
+---
+
 ## REPL Environments
-We support two types of REPL environments -- isolated, and non-isolated. Non-isolated environments (default) run code execution on the same machine as the RLM (e.g. through `exec`), which is pretty reasonable for some local low-risk tasks, like simple benchmarking, but can be problematic if the prompts or tool calls can interact with malicious users. Fully isolated environments use cloud-based sandboxes (e.g. Prime Sandboxes, [Modal Sandboxes](https://modal.com/docs/guide/sandboxes)) to run code generated by the RLM, ensuring complete isolation from the host process. Environments can be added, but we natively support the following: `local` (default), `docker`, `modal`, `prime`, `daytona`, `e2b`.
+
+We support two types of REPL environments — isolated, and non-isolated.
 
 ```python
 rlm = RLM(
@@ -87,48 +197,40 @@ rlm = RLM(
 ```
 
 ### Local Environments
-The default `local` environment `LocalREPL` runs in the same process as the RLM itself, with specified global and local namespaces for minimal security. Using this REPL is generally safe, but should not be used for production settings. It also shares the same virtual environment (e.g. Conda or uv) as the host process.
+The default `local` environment `LocalREPL` runs in the same process as the RLM itself, with specified global and local namespaces for minimal security.
 
 #### Docker <img src="https://github.com/docker.png" alt="Docker" height="20" style="vertical-align: middle;"/> (*requires [Docker installed](https://docs.docker.com/desktop/setup/install/)*)
-We also support a Docker-based environment called `DockerREPL` that launches the REPL environment as a Docker image. By default, we use the `python:3.11-slim` image, but the user can specify custom images as well.
+We also support a Docker-based environment called `DockerREPL` that launches the REPL environment as a Docker image.
 
 ### Isolated Environments
-We support several different REPL environments that run on separate, cloud-based machines. Whenever a recursive sub-call is made in these instances, it is requested from the host process.
 
 #### Modal Sandboxes <img src="https://github.com/modal-labs.png" alt="Modal" height="20" style="vertical-align: middle;"/>
-To use [Modal Sandboxes](https://modal.com/docs/guide/sandboxes) as the REPL environment, you need to install and authenticate your Modal account.
+To use [Modal Sandboxes](https://modal.com/docs/guide/sandboxes):
 ```bash
-uv add modal  # add modal library
-modal setup   # authenticate account
+uv add modal
+modal setup
 ```
 
 #### Prime Intellect Sandboxes <img src="https://github.com/PrimeIntellect-ai.png" alt="Prime Intellect" height="20" style="vertical-align: middle;"/>
 > [!NOTE]
-> **Prime Intellect Sandboxes** are currently a beta feature. See the [documentation](https://docs.primeintellect.ai/sandboxes/overview) for more information. We noticed slow runtimes when using these sandboxes, which is currently an open issue.
+> **Prime Intellect Sandboxes** are currently a beta feature.
 
-
-To use [Prime Sandboxes](https://docs.primeintellect.ai/sandboxes/sdk), install the SDK and set your API key:
 ```bash
 uv pip install -e ".[prime]"
 export PRIME_API_KEY=...
 ```
 
+---
 
-### Model Providers
-We currently support most major clients (OpenAI, Anthropic), as well as the router platforms (OpenRouter, Portkey). For local models, we recommend using vLLM (which interfaces with the [OpenAI client](https://github.com/alexzhang13/rlm/blob/main/rlm/clients/openai.py)). To view or add support for more clients, start by looking at [`rlm/clients/`](https://github.com/alexzhang13/rlm/tree/main/rlm/clients).
+## Model Providers
+
+We currently support most major clients (OpenAI, Anthropic), as well as router platforms (OpenRouter, Portkey). For local models, we recommend using Ollama or vLLM. To view or add more clients, see [`rlm/clients/`](https://github.com/alexzhang13/rlm/tree/main/rlm/clients).
 
 ### Local Models + Docker REPL
 RLM separates **model inference backend** from **code execution environment**:
 
-- Inference backend: where model tokens are generated (`backend="vllm"` or `backend="openai"` + `base_url` for OpenAI-compatible local servers).
-- REPL environment: where generated Python runs (`environment="docker"`, `"local"`, `"modal"`, etc).
-
-This means local inference is supported: you can run a local model server on your host GPU and still execute RLM code in Docker for isolation.
-
-> [!NOTE]
-> Modal/Prime/Daytona/E2B are REPL execution environments. They do not replace your model backend unless you explicitly point `base_url` to a model endpoint running there.
-
-Example (hosted local model server + Docker REPL):
+- Inference backend: where model tokens are generated (`backend="vllm"` or `backend="openai"` + `base_url`).
+- REPL environment: where generated Python runs (`environment="docker"`, `"local"`, etc).
 
 ```python
 from rlm import RLM
@@ -138,7 +240,7 @@ rlm = RLM(
   backend_kwargs={
     "model_name": "meta-llama/Llama-3.1-8B-Instruct",
     "base_url": "http://127.0.0.1:8000/v1",
-    "api_key": "EMPTY",  # local OpenAI-compatible servers usually ignore this
+    "api_key": "EMPTY",
   },
   environment="docker",
   environment_kwargs={"image": "python:3.11-slim"},
@@ -148,29 +250,10 @@ result = rlm.completion("Summarize this context in 3 bullet points.")
 print(result.response)
 ```
 
-Optional benchmark helper:
-
-```bash
-make local-benchmark
-# or
-uv run python -m examples.local_model_docker_benchmark --base-url http://127.0.0.1:8000/v1 --model meta-llama/Llama-3.1-8B-Instruct
-```
-
 ### Single Container: App + LLM Together (Ollama)
-
-This repository now includes a root `Dockerfile` that launches both:
-- an Ollama server (OpenAI-compatible endpoint), and
-- an application command (defaults to the benchmark example).
-
-Build:
 
 ```bash
 docker build -t rlm-all-in-one .
-```
-
-Run (GPU optional; recommended if available):
-
-```bash
 docker run --rm --gpus all \
   -e OLLAMA_MODEL=qwen2.5:0.5b \
   -e APP_CMD="python -m examples.local_model_docker_benchmark --backend openai --environment local --base-url http://127.0.0.1:11434/v1 --model qwen2.5:0.5b --api-key EMPTY --runs 3" \
@@ -179,35 +262,16 @@ docker run --rm --gpus all \
   rlm-all-in-one
 ```
 
-Notes:
-- `APP_CMD` can be any command you want to run in the same container.
-- Use `OLLAMA_SKIP_PULL=1` if the model is already present in the mounted Ollama volume.
-- The OpenAI-compatible endpoint is exposed at `http://localhost:11434/v1`.
-- The startup script is `docker/start_app_with_ollama.sh`.
-
 ### Docker Compose: GUI + GPU + Benchmarks
 
-If you want the GUI and GPU-backed LLM up at the same time, use the compose stack:
-
-- `ollama` service: GPU-backed model server on `http://localhost:11434`.
-- `benchmark` service: Python runtime for benchmark commands.
-- `gui` service: visualizer UI on `http://localhost:3001`.
-
-Start everything:
-
 ```bash
+# Start everything
 docker compose up -d --build ollama benchmark gui
-```
 
-Pull a model once:
-
-```bash
+# Pull a model (once)
 docker compose exec ollama ollama pull qwen2.5:0.5b
-```
 
-Run benchmarks while GUI remains running:
-
-```bash
+# Run a benchmark while GUI stays live
 docker compose exec benchmark python -m examples.local_model_docker_benchmark \
   --backend openai \
   --environment local \
@@ -215,23 +279,28 @@ docker compose exec benchmark python -m examples.local_model_docker_benchmark \
   --model qwen2.5:0.5b \
   --api-key EMPTY \
   --runs 3
-```
 
-Live GUI mode (no manual `.jsonl` upload required):
-
-1. Open `http://localhost:3001`
-2. Use the **Live Run** panel to enter your prompt, model, runs, and max iterations
-3. Click **Run Live** to stream iteration and subcall events in real time
-4. Completed runs are added to **Loaded Files** and can be opened in the full trajectory viewer
-
-Useful checks:
-
-```bash
-docker compose ps
-docker compose logs -f ollama
-docker compose logs -f benchmark
+# Monitor logs
 docker compose logs -f gui
+docker compose logs -f ollama
 ```
+
+---
+
+## Optional: Trajectory Logging
+
+```python
+from rlm.logger import RLMLogger
+from rlm import RLM
+
+logger = RLMLogger(log_dir="./logs")
+rlm = RLM(..., logger=logger)
+```
+
+- **In-memory only** (trajectory on `completion.metadata`): `logger=RLMLogger()` (no `log_dir`).
+- **Save to disk** (JSONL for the visualizer): `logger=RLMLogger(log_dir="./logs")`.
+
+---
 
 ## Relevant Reading
 * **[Dec '25]** [Recursive Language Models arXiv](https://arxiv.org/abs/2512.24601)
@@ -250,30 +319,3 @@ If you use this code or repository in your research, please cite:
       url={https://arxiv.org/abs/2512.24601},
 }
 ```
-
-## Optional: Trajectory metadata and logging
-`RLMChatCompletion` has an optional `metadata` field (default `None`) that holds the full trajectory (run config + all iterations and sub-calls) so you can reconstruct the run. Pass an `RLMLogger` to capture it:
-
-- **In-memory only** (trajectory on `completion.metadata`): `logger=RLMLogger()` (no `log_dir`).
-- **Also save to disk** (JSONL for the visualizer): `logger=RLMLogger(log_dir="./logs")`.
-
-## Optional Debugging: Visualizing RLM Trajectories
-We provide a simple visualizer to inspect code, sub-LM, and root-LM calls. Use `RLMLogger(log_dir="./logs")` so each completion writes a `.jsonl` file:
-```python
-from rlm.logger import RLMLogger
-from rlm import RLM
-
-logger = RLMLogger(log_dir="./logs")
-rlm = RLM(..., logger=logger)
-```
-
-To run the visualizer locally, we use Node.js and shadcn/ui:
-```
-cd visualizer/
-npm run dev        # default localhost:3001
-```
-
-You'll have the option to select saved `.jsonl` files 
-<p align="center">
-  <img src="media/visualizer.png" alt="RLM Visualizer Example" width="800"/>
-</p>

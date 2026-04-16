@@ -159,7 +159,17 @@ export function computeMetadata(iterations: RLMIteration[]): LogMetadata {
       finalAnswer = extractFinalAnswer(iter.final_answer);
     }
   }
-  
+
+  // Fallback: if the model never called FINAL_VAR(), use the last iteration's
+  // response as the final answer so the UI never shows "Not yet completed"
+  // after a run that clearly produced output.
+  if (!finalAnswer && iterations.length > 0) {
+    const lastResponse = iterations[iterations.length - 1].response;
+    if (lastResponse && lastResponse.trim()) {
+      finalAnswer = lastResponse.trim();
+    }
+  }
+
   return {
     totalIterations: iterations.length,
     totalCodeBlocks,
@@ -170,6 +180,7 @@ export function computeMetadata(iterations: RLMIteration[]): LogMetadata {
     hasErrors,
   };
 }
+
 
 export function parseLogFile(fileName: string, content: string): RLMLogFile {
   const { iterations, config } = parseJSONL(content);
